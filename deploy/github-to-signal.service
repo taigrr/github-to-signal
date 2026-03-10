@@ -1,0 +1,23 @@
+[Unit]
+Description=GitHub webhook to Signal notifications
+After=signal-cli-bot.service
+Requires=signal-cli-bot.service
+
+[Service]
+Type=exec
+ExecStart=/usr/local/bin/github-to-signal
+WorkingDirectory=/etc/github-to-signal
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+User=signal-bot
+Group=signal-bot
+
+[Install]
+WantedBy=multi-user.target

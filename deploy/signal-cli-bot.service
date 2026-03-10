@@ -1,0 +1,23 @@
+[Unit]
+Description=signal-cli daemon for github-to-signal bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+ExecStart=/usr/local/bin/signal-cli -a +1YOURNUMBER daemon --http 127.0.0.1:8081 --no-receive-stdout
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/home/signal-bot/.local/share/signal-cli
+
+User=signal-bot
+Group=signal-bot
+
+[Install]
+WantedBy=multi-user.target

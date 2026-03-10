@@ -90,6 +90,38 @@ In your repo (or org) settings:
 | `/webhook` | POST | GitHub webhook receiver |
 | `/health` | GET | Health check (returns `ok`) |
 
+## Deployment
+
+Systemd services and nginx config are in `deploy/`.
+
+```bash
+# Create service user
+sudo useradd -r -m -s /usr/sbin/nologin signal-bot
+
+# Install binary
+go build -o /usr/local/bin/github-to-signal .
+
+# Install config
+sudo mkdir -p /etc/github-to-signal
+sudo cp config.toml /etc/github-to-signal/
+sudo chown -R signal-bot:signal-bot /etc/github-to-signal
+
+# Install systemd services
+sudo cp deploy/signal-cli-bot.service /etc/systemd/system/
+sudo cp deploy/github-to-signal.service /etc/systemd/system/
+sudo systemctl daemon-reload
+
+# Enable and start (signal-cli-bot starts automatically as a dependency)
+sudo systemctl enable --now github-to-signal
+
+# Install nginx config
+sudo cp deploy/github-to-signal.nginx.conf /etc/nginx/sites-available/github-to-signal
+sudo ln -s /etc/nginx/sites-available/github-to-signal /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Edit the service files first to set your phone number and paths. The signal-cli daemon listens on `127.0.0.1:8081` (not 8080, to avoid conflicts). Update `signal_url` in your config.toml to match.
+
 ## Dependencies
 
 - [cbrgm/githubevents](https://github.com/cbrgm/githubevents) — GitHub webhook event handling
