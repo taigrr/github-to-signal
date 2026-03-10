@@ -1,0 +1,9 @@
+# Binaries
+github-to-signal
+*.exe
+
+# Config with secrets
+config.toml
+config.yaml
+config.json
+*.env

@@ -1,0 +1,14 @@
+# GitHub webhook secret (set in your GitHub webhook settings)
+webhook_secret = ""
+
+# Address to listen on
+listen_addr = ":9900"
+
+# signal-cli JSON-RPC endpoint
+signal_url = "http://127.0.0.1:8080"
+
+# signal-cli account (phone number registered with signal-cli)
+signal_account = "+1234567890"
+
+# Signal recipient UUID or phone number to send notifications to
+signal_recipient = ""
