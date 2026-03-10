@@ -19,8 +19,8 @@ func main() {
 	if cfg.SignalAccount == "" {
 		log.Fatal("signal_account is required (set GH2SIG_SIGNAL_ACCOUNT or config.toml)")
 	}
-	if cfg.SignalRecipient == "" {
-		log.Fatal("signal_recipient is required (set GH2SIG_SIGNAL_RECIPIENT or config.toml)")
+	if cfg.SignalRecipient == "" && cfg.SignalGroupID == "" {
+		log.Fatal("signal_recipient or signal_group_id is required")
 	}
 
 	signal := signalcli.NewClient(cfg.SignalURL, cfg.SignalAccount)
@@ -29,6 +29,7 @@ func main() {
 	notifier := &notifier{
 		signal:    signal,
 		recipient: cfg.SignalRecipient,
+		groupID:   cfg.SignalGroupID,
 	}
 
 	// Register event handlers.
@@ -73,16 +74,20 @@ func main() {
 type notifier struct {
 	signal    *signalcli.Client
 	recipient string
+	groupID   string
 }
 
 func (n *notifier) send(ctx context.Context, msg string) {
 	if msg == "" {
 		return
 	}
-	_, err := n.signal.Send(ctx, signalcli.SendParams{
-		Recipient: n.recipient,
-		Message:   msg,
-	})
+	params := signalcli.SendParams{Message: msg}
+	if n.groupID != "" {
+		params.GroupID = n.groupID
+	} else {
+		params.Recipient = n.recipient
+	}
+	_, err := n.signal.Send(ctx, params)
 	if err != nil {
 		log.Printf("signal send error: %v", err)
 	}
