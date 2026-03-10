@@ -2,18 +2,100 @@
 
 HTTP server that receives GitHub webhook events and forwards them as Signal messages via [signal-cli](https://github.com/AsamK/signal-cli).
 
-## Events
+## Supported Events
 
-Push, issues, issue comments, pull requests, PR reviews, PR review comments, releases, stars, forks, workflow runs, branch/tag creation and deletion.
+- **Push** — commits pushed to a branch
+- **Issues** — opened, closed, reopened, etc.
+- **Issue comments** — new comments on issues
+- **Pull requests** — opened, closed, merged, etc.
+- **PR reviews** — approved, changes requested, commented
+- **PR review comments** — inline code comments on PRs
+- **Releases** — published, drafted, etc.
+- **Stars** — starred/unstarred (with count)
+- **Forks** — repo forked
+- **Workflow runs** — CI completed (with pass/fail indicator)
+- **Branch/tag create** — new branches or tags
+- **Branch/tag delete** — deleted branches or tags
 
 ## Setup
 
-1. Copy `config.example.toml` to `config.toml` and fill in values
-2. Run the server: `go run .`
-3. Add a webhook in your GitHub repo pointing to `https://your-host:9900/webhook`
+### 1. Signal Profile
 
-All config values can also be set via environment variables with `GH2SIG_` prefix (e.g. `GH2SIG_SIGNAL_ACCOUNT`).
+Register a phone number with signal-cli, then set up the bot profile:
 
-## Requirements
+```bash
+# Set the bot's display name
+signal-cli -a +1YOURNUMBER updateProfile --given-name "Github" --family-name "PRs"
 
-- [signal-cli](https://github.com/AsamK/signal-cli) running in daemon mode with JSON-RPC enabled
+# Set the octocat avatar (included in assets/)
+signal-cli -a +1YOURNUMBER updateProfile --avatar assets/octocat.png
+```
+
+### 2. Run signal-cli daemon
+
+```bash
+signal-cli -a +1YOURNUMBER daemon --http 127.0.0.1:8080 --no-receive-stdout
+```
+
+### 3. Configure
+
+Copy `config.example.toml` to `config.toml`:
+
+```toml
+# GitHub webhook secret (set in your GitHub webhook settings)
+webhook_secret = "your-secret-here"
+
+# Address to listen on
+listen_addr = ":9900"
+
+# signal-cli JSON-RPC endpoint
+signal_url = "http://127.0.0.1:8080"
+
+# signal-cli account (phone number registered with signal-cli)
+signal_account = "+1YOURNUMBER"
+
+# Signal recipient UUID to send notifications to
+signal_recipient = "your-uuid-here"
+```
+
+All values can also be set via environment variables with `GH2SIG_` prefix:
+
+```bash
+export GH2SIG_WEBHOOK_SECRET="your-secret"
+export GH2SIG_SIGNAL_ACCOUNT="+1YOURNUMBER"
+export GH2SIG_SIGNAL_RECIPIENT="recipient-uuid"
+```
+
+### 4. Build and run
+
+```bash
+go build -o github-to-signal .
+./github-to-signal
+```
+
+### 5. Add GitHub webhook
+
+In your repo (or org) settings:
+
+1. Go to **Settings > Webhooks > Add webhook**
+2. **Payload URL:** `https://your-host:9900/webhook`
+3. **Content type:** `application/json`
+4. **Secret:** same value as `webhook_secret` in your config
+5. **Events:** select the events you want, or "Send me everything"
+
+### Endpoints
+
+| Path | Method | Description |
+|------|--------|-------------|
+| `/webhook` | POST | GitHub webhook receiver |
+| `/health` | GET | Health check (returns `ok`) |
+
+## Dependencies
+
+- [cbrgm/githubevents](https://github.com/cbrgm/githubevents) — GitHub webhook event handling
+- [taigrr/signalcli](https://github.com/taigrr/signalcli) — signal-cli Go client
+- [taigrr/jety](https://github.com/taigrr/jety) — configuration (TOML/JSON/YAML/env)
+
+## License
+
+0BSD
