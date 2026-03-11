@@ -15,3 +15,18 @@ signal_recipient = ""
 
 # OR: Signal group ID for group notifications (overrides signal_recipient)
 # signal_group_id = ""
+
+# Event filter — comma-separated list of event types to forward.
+# Use "event" for all actions, or "event:action" for specific actions.
+# Leave empty or omit to forward everything.
+#
+# Examples:
+#   events = "pull_request:opened, pull_request:closed, issues:opened"
+#   events = "push, pull_request, workflow_run"
+#   events = "pull_request:opened"
+#
+# Available events: push, issues, issue_comment, pull_request,
+#   pull_request_review, pull_request_review_comment, release,
+#   star, fork, workflow_run, create, delete
+#
+# events = ""
