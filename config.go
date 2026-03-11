@@ -1,6 +1,10 @@
 package main
 
-import "github.com/taigrr/jety"
+import (
+	"strings"
+
+	"github.com/taigrr/jety"
+)
 
 // Config holds the application configuration.
 type Config struct {
@@ -16,6 +20,8 @@ type Config struct {
 	SignalRecipient string
 	// SignalGroupID is the Signal group ID for group notifications (overrides SignalRecipient).
 	SignalGroupID string
+	// Events is the event filter. Empty means all events are forwarded.
+	Events EventFilter
 }
 
 func loadConfig() Config {
@@ -27,6 +33,18 @@ func loadConfig() Config {
 	jety.SetConfigType("toml")
 	_ = jety.ReadInConfig()
 
+	// Parse events filter from comma-separated string or TOML array.
+	var filters []string
+	raw := jety.GetString("events")
+	if raw != "" {
+		for _, s := range strings.Split(raw, ",") {
+			s = strings.TrimSpace(s)
+			if s != "" {
+				filters = append(filters, s)
+			}
+		}
+	}
+
 	return Config{
 		ListenAddr:      jety.GetString("listen_addr"),
 		WebhookSecret:   jety.GetString("webhook_secret"),
@@ -34,5 +52,6 @@ func loadConfig() Config {
 		SignalAccount:   jety.GetString("signal_account"),
 		SignalRecipient: jety.GetString("signal_recipient"),
 		SignalGroupID:   jety.GetString("signal_group_id"),
+		Events:          ParseEventFilter(filters),
 	}
 }
