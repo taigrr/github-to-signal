@@ -122,6 +122,23 @@ sudo nginx -t && sudo systemctl reload nginx
 
 Edit the service files first to set your phone number and paths. The signal-cli daemon listens on `127.0.0.1:8081` (not 8080, to avoid conflicts). Update `signal_url` in your config.toml to match.
 
+### SSL with Certbot
+
+Install certbot and the nginx plugin, then request a certificate:
+
+```bash
+# Install certbot (Debian/Ubuntu)
+sudo apt install certbot python3-certbot-nginx
+
+# Request certificate (certbot auto-configures nginx)
+sudo certbot --nginx -d ghwebhook.example.com
+
+# Verify auto-renewal is enabled
+sudo systemctl status certbot.timer
+```
+
+Certbot will automatically modify the nginx config to enable SSL and set up renewal. The signal-cli daemon listens on `127.0.0.1:8081` (not 8080, to avoid conflicts). Update `signal_url` in your config.toml to match.
+
 ## Dependencies
 
 - [cbrgm/githubevents](https://github.com/cbrgm/githubevents) — GitHub webhook event handling
