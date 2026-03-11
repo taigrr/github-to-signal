@@ -9,15 +9,5 @@ ExecStart=/usr/local/bin/signal-cli -a +18134455076 daemon --http 127.0.0.1:8081
 Restart=on-failure
 RestartSec=5
 
-# Hardening
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-ReadWritePaths=/home/signal-bot/.local/share/signal-cli
-
-User=signal-bot
-Group=signal-bot
-
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
