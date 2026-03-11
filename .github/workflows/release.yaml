@@ -20,6 +20,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Configure private modules
+        run: git config --global url."https://${{ secrets.GO_MODULE_PAT }}@github.com/".insteadOf "https://github.com/"
+        if: ${{ secrets.GO_MODULE_PAT != '' }}
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser-pro
