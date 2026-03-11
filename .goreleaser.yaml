@@ -1,0 +1,69 @@
+version: 2
+
+project_name: github-to-signal
+
+before:
+  hooks:
+    - go generate ./...
+    - go mod tidy
+
+builds:
+  - id: github-to-signal
+    main: .
+    binary: github-to-signal
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - LICENSE
+      - README.md
+      - config.example.toml
+      - deploy/*
+
+nfpms:
+  - id: packages
+    package_name: github-to-signal
+    vendor: taigrr
+    homepage: https://github.com/taigrr/github-to-signal
+    maintainer: Tai Groot <tai@taigrr.com>
+    description: GitHub webhook to Signal notifications
+    license: 0BSD
+    formats:
+      - deb
+      - rpm
+    contents:
+      - src: deploy/github-to-signal.service
+        dst: /usr/lib/systemd/user/github-to-signal.service
+        type: config
+      - src: deploy/signal-cli-bot.service
+        dst: /usr/lib/systemd/user/signal-cli-bot.service
+        type: config
+      - src: config.example.toml
+        dst: /etc/github-to-signal/config.example.toml
+        type: config
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github-native
+
+release:
+  github:
+    owner: taigrr
+    name: github-to-signal
