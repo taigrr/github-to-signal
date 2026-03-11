@@ -44,7 +44,7 @@ func formatIssue(event *github.IssuesEvent) string {
 		repo, sender, action, issue.GetNumber(), issue.GetTitle(), issue.GetHTMLURL())
 
 	if action == "opened" && issue.GetBody() != "" {
-		body := truncate(issue.GetBody(), 200)
+		body := truncate(issue.GetBody(), 2000)
 		msg += "\n\n" + body
 	}
 
@@ -58,7 +58,7 @@ func formatIssueComment(event *github.IssueCommentEvent) string {
 	issue := event.GetIssue()
 	comment := event.GetComment()
 
-	body := truncate(comment.GetBody(), 300)
+	body := truncate(comment.GetBody(), 2000)
 
 	return fmt.Sprintf("[%s] %s commented on #%d (%s):\n%s\n%s",
 		repo, sender, issue.GetNumber(), issue.GetTitle(), body, comment.GetHTMLURL())
@@ -75,7 +75,7 @@ func formatPR(event *github.PullRequestEvent) string {
 		repo, sender, action, pr.GetNumber(), pr.GetTitle(), pr.GetHTMLURL())
 
 	if action == "opened" && pr.GetBody() != "" {
-		body := truncate(pr.GetBody(), 200)
+		body := truncate(pr.GetBody(), 2000)
 		msg += "\n\n" + body
 	}
 
@@ -90,7 +90,7 @@ func formatPRReview(event *github.PullRequestReviewEvent) string {
 	review := event.GetReview()
 
 	state := review.GetState()
-	body := truncate(review.GetBody(), 200)
+	body := truncate(review.GetBody(), 2000)
 
 	msg := fmt.Sprintf("[%s] %s %s PR #%d: %s\n%s",
 		repo, sender, state, pr.GetNumber(), pr.GetTitle(), review.GetHTMLURL())
@@ -109,7 +109,7 @@ func formatPRReviewComment(event *github.PullRequestReviewCommentEvent) string {
 	pr := event.GetPullRequest()
 	comment := event.GetComment()
 
-	body := truncate(comment.GetBody(), 300)
+	body := truncate(comment.GetBody(), 2000)
 
 	return fmt.Sprintf("[%s] %s commented on PR #%d (%s):\n%s\n%s",
 		repo, sender, pr.GetNumber(), pr.GetTitle(), body, comment.GetHTMLURL())
