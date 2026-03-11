@@ -34,7 +34,7 @@ signal-cli -a +1YOURNUMBER updateProfile --avatar assets/octocat.png
 ### 2. Run signal-cli daemon
 
 ```bash
-signal-cli -a +1YOURNUMBER daemon --http 127.0.0.1:8080 --no-receive-stdout
+signal-cli -a +1YOURNUMBER daemon --http 127.0.0.1:8081 --no-receive-stdout
 ```
 
 ### 3. Configure
@@ -49,7 +49,7 @@ webhook_secret = "your-secret-here"
 listen_addr = ":9900"
 
 # signal-cli JSON-RPC endpoint
-signal_url = "http://127.0.0.1:8080"
+signal_url = "http://127.0.0.1:8081"
 
 # signal-cli account (phone number registered with signal-cli)
 signal_account = "+1YOURNUMBER"
