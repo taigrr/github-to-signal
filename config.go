@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"strings"
 
 	"github.com/taigrr/jety"
@@ -8,20 +9,21 @@ import (
 
 // Config holds the application configuration.
 type Config struct {
-	// ListenAddr is the address to bind the webhook server to.
-	ListenAddr string
-	// WebhookSecret is the GitHub webhook secret for signature validation.
-	WebhookSecret string
-	// SignalURL is the signal-cli JSON-RPC base URL.
-	SignalURL string
-	// SignalAccount is the signal-cli account (phone number or UUID).
-	SignalAccount string
-	// SignalRecipient is the default Signal recipient UUID for DM notifications.
+	ListenAddr      string
+	WebhookSecret   string
+	CISecret        string
+	SignalURL       string
+	SignalAccount   string
 	SignalRecipient string
-	// SignalGroupID is the Signal group ID for group notifications (overrides SignalRecipient).
-	SignalGroupID string
-	// Events is the event filter. Empty means all events are forwarded.
-	Events EventFilter
+	SignalGroupID   string
+	Events          EventFilter
+	Endpoints       []Endpoint
+}
+
+// Endpoint defines a custom HTTP endpoint that forwards messages to one or more Signal groups.
+type Endpoint struct {
+	Slug     string
+	GroupIDs []string
 }
 
 func loadConfig() Config {
@@ -33,7 +35,6 @@ func loadConfig() Config {
 	jety.SetConfigType("toml")
 	_ = jety.ReadInConfig()
 
-	// Parse events filter from comma-separated string or TOML array.
 	var filters []string
 	raw := jety.GetString("events")
 	if raw != "" {
@@ -48,10 +49,58 @@ func loadConfig() Config {
 	return Config{
 		ListenAddr:      jety.GetString("listen_addr"),
 		WebhookSecret:   jety.GetString("webhook_secret"),
+		CISecret:        jety.GetString("ci_secret"),
 		SignalURL:       jety.GetString("signal_url"),
 		SignalAccount:   jety.GetString("signal_account"),
 		SignalRecipient: jety.GetString("signal_recipient"),
 		SignalGroupID:   jety.GetString("signal_group_id"),
 		Events:          ParseEventFilter(filters),
+		Endpoints:       parseEndpoints(),
 	}
+}
+
+func parseEndpoints() []Endpoint {
+	raw := jety.Get("endpoints")
+	if raw == nil {
+		return nil
+	}
+
+	tables, ok := raw.([]map[string]any)
+	if !ok {
+		log.Printf("warning: endpoints config is not a valid TOML array of tables")
+		return nil
+	}
+
+	var endpoints []Endpoint
+	for _, t := range tables {
+		slug, _ := t["slug"].(string)
+		if slug == "" {
+			log.Printf("warning: endpoint missing slug, skipping")
+			continue
+		}
+		if !strings.HasPrefix(slug, "/") {
+			slug = "/" + slug
+		}
+
+		var groupIDs []string
+		switch v := t["group_ids"].(type) {
+		case []any:
+			for _, item := range v {
+				if s, ok := item.(string); ok && s != "" {
+					groupIDs = append(groupIDs, s)
+				}
+			}
+		case []string:
+			groupIDs = v
+		}
+
+		if len(groupIDs) == 0 {
+			log.Printf("warning: endpoint %q has no group_ids, skipping", slug)
+			continue
+		}
+
+		endpoints = append(endpoints, Endpoint{Slug: slug, GroupIDs: groupIDs})
+	}
+
+	return endpoints
 }

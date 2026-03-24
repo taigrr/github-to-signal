@@ -4,9 +4,12 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/cbrgm/githubevents/v2/githubevents"
 	"github.com/google/go-github/v70/github"
@@ -92,6 +95,10 @@ func main() {
 		}
 		w.WriteHeader(http.StatusOK)
 	})
+	for _, ep := range cfg.Endpoints {
+		mux.HandleFunc("POST "+ep.Slug, n.handleCustom(cfg.CISecret, ep.GroupIDs))
+		log.Printf("custom endpoint enabled: POST %s -> %d group(s)", ep.Slug, len(ep.GroupIDs))
+	}
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
@@ -220,4 +227,78 @@ func (n *notifier) onDelete(ctx context.Context, _ string, _ string, event *gith
 	}
 	n.send(ctx, formatDelete(event))
 	return nil
+}
+
+type customMessage struct {
+	Source  string `json:"source"`
+	Message string `json:"message"`
+}
+
+func (n *notifier) handleCustom(secret string, groupIDs []string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if secret != "" {
+			provided := r.Header.Get("X-CI-Secret")
+			if subtle.ConstantTimeCompare([]byte(provided), []byte(secret)) != 1 {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+		}
+
+		var msg customMessage
+		if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+			http.Error(w, "invalid JSON body", http.StatusBadRequest)
+			return
+		}
+		if msg.Message == "" {
+			http.Error(w, "message is required", http.StatusBadRequest)
+			return
+		}
+
+		text := msg.Message
+		if msg.Source != "" {
+			text = fmt.Sprintf("[%s] %s", msg.Source, msg.Message)
+		}
+
+		n.sendToGroups(r.Context(), text, groupIDs)
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+const maxMessageLen = 2000
+
+func (n *notifier) sendToGroups(ctx context.Context, msg string, groupIDs []string) {
+	chunks := splitMessage(msg)
+	for _, gid := range groupIDs {
+		for _, chunk := range chunks {
+			params := signalcli.SendParams{Message: chunk, GroupID: gid}
+			if _, err := n.signal.Send(ctx, params); err != nil {
+				log.Printf("signal send error (group %s): %v", gid, err)
+			}
+		}
+	}
+}
+
+func splitMessage(msg string) []string {
+	if len(msg) <= maxMessageLen {
+		return []string{msg}
+	}
+
+	var chunks []string
+	for len(msg) > 0 {
+		end := maxMessageLen
+		if end > len(msg) {
+			end = len(msg)
+		}
+		if end < len(msg) {
+			if idx := strings.LastIndex(msg[:end], "\n"); idx > 0 {
+				end = idx + 1
+			}
+		}
+		chunk := strings.TrimSpace(msg[:end])
+		if chunk != "" {
+			chunks = append(chunks, chunk)
+		}
+		msg = msg[end:]
+	}
+	return chunks
 }

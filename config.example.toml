@@ -1,6 +1,10 @@
 # GitHub webhook secret (set in your GitHub webhook settings)
 webhook_secret = ""
 
+# Shared secret for custom endpoints (validated via X-CI-Secret header).
+# Leave empty to allow unauthenticated access to custom endpoints.
+ci_secret = ""
+
 # Address to listen on
 listen_addr = ":9900"
 
@@ -10,7 +14,7 @@ signal_url = "http://127.0.0.1:8081"
 # signal-cli account (phone number registered with signal-cli)
 signal_account = "+YOURNUMBER"
 
-# Signal recipient UUID for DM notifications
+# Signal recipient UUID for DM notifications (used by GitHub webhook handler)
 signal_recipient = ""
 
 # OR: Signal group ID for group notifications (overrides signal_recipient)
@@ -30,3 +34,22 @@ signal_recipient = ""
 #   star, fork, workflow_run, create, delete
 #
 # events = ""
+
+# Custom endpoints — each [[endpoints]] block registers a POST route
+# that accepts {"source":"...","message":"..."} JSON and forwards the
+# message to the listed Signal group IDs. Auth via X-CI-Secret header
+# (if ci_secret is set).
+#
+# POST /prs  -> sends to one group
+# POST /releases -> sends to two groups
+
+[[endpoints]]
+slug = "/prs"
+group_ids = ["group-id-for-pr-notifications"]
+
+[[endpoints]]
+slug = "/releases"
+group_ids = [
+  "group-id-for-release-channel-1",
+  "group-id-for-release-channel-2",
+]
