@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/cbrgm/githubevents/v2/githubevents"
-	"github.com/google/go-github/v70/github"
+	"github.com/google/go-github/v84/github"
 	"github.com/taigrr/signalcli"
 )
 

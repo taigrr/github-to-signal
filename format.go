@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-github/v70/github"
+	"github.com/google/go-github/v84/github"
 )
 
 // formatPush formats a push event into a Signal message.
