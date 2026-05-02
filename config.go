@@ -7,6 +7,8 @@ import (
 	"github.com/taigrr/jety"
 )
 
+const defaultSignalURL = "http://127.0.0.1:8081"
+
 // Config holds the application configuration.
 type Config struct {
 	ListenAddr      string
@@ -28,7 +30,7 @@ type Endpoint struct {
 
 func loadConfig() Config {
 	jety.SetDefault("listen_addr", ":9900")
-	jety.SetDefault("signal_url", "http://127.0.0.1:8080")
+	jety.SetDefault("signal_url", defaultSignalURL)
 
 	jety.SetEnvPrefix("GH2SIG")
 	jety.SetConfigFile("config.toml")
@@ -60,7 +62,10 @@ func loadConfig() Config {
 }
 
 func parseEndpoints() []Endpoint {
-	raw := jety.Get("endpoints")
+	return parseEndpointsValue(jety.Get("endpoints"))
+}
+
+func parseEndpointsValue(raw any) []Endpoint {
 	if raw == nil {
 		return nil
 	}
@@ -91,7 +96,11 @@ func parseEndpoints() []Endpoint {
 				}
 			}
 		case []string:
-			groupIDs = v
+			for _, groupID := range v {
+				if groupID != "" {
+					groupIDs = append(groupIDs, groupID)
+				}
+			}
 		}
 
 		if len(groupIDs) == 0 {
