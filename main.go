@@ -279,26 +279,27 @@ func (n *notifier) sendToGroups(ctx context.Context, msg string, groupIDs []stri
 }
 
 func splitMessage(msg string) []string {
-	if len(msg) <= maxMessageLen {
+	runes := []rune(msg)
+	if len(runes) <= maxMessageLen {
 		return []string{msg}
 	}
 
 	var chunks []string
-	for len(msg) > 0 {
+	for len(runes) > 0 {
 		end := maxMessageLen
-		if end > len(msg) {
-			end = len(msg)
+		if end > len(runes) {
+			end = len(runes)
 		}
-		if end < len(msg) {
-			if idx := strings.LastIndex(msg[:end], "\n"); idx > 0 {
+		if end < len(runes) {
+			if idx := strings.LastIndex(string(runes[:end]), "\n"); idx > 0 {
 				end = idx + 1
 			}
 		}
-		chunk := strings.TrimSpace(msg[:end])
+		chunk := strings.TrimSpace(string(runes[:end]))
 		if chunk != "" {
 			chunks = append(chunks, chunk)
 		}
-		msg = msg[end:]
+		runes = runes[end:]
 	}
 	return chunks
 }
