@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"net/url"
 	"strings"
+	"unicode"
 
 	"github.com/taigrr/jety"
 )
@@ -79,12 +81,11 @@ func parseEndpointsValue(raw any) []Endpoint {
 	var endpoints []Endpoint
 	for _, t := range tables {
 		slug, _ := t["slug"].(string)
-		if slug == "" {
-			log.Printf("warning: endpoint missing slug, skipping")
+		var ok bool
+		slug, ok = normalizeEndpointSlug(slug)
+		if !ok {
+			log.Printf("warning: endpoint has invalid slug, skipping")
 			continue
-		}
-		if !strings.HasPrefix(slug, "/") {
-			slug = "/" + slug
 		}
 
 		var groupIDs []string
@@ -112,4 +113,28 @@ func parseEndpointsValue(raw any) []Endpoint {
 	}
 
 	return endpoints
+}
+
+func normalizeEndpointSlug(slug string) (string, bool) {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return "", false
+	}
+	if !strings.HasPrefix(slug, "/") {
+		slug = "/" + slug
+	}
+	if strings.ContainsAny(slug, "{}") {
+		return "", false
+	}
+	for _, r := range slug {
+		if unicode.IsSpace(r) || unicode.IsControl(r) {
+			return "", false
+		}
+	}
+
+	parsed, err := url.ParseRequestURI(slug)
+	if err != nil || parsed.Path != slug || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", false
+	}
+	return slug, true
 }

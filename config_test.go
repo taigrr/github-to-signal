@@ -49,6 +49,19 @@ func TestParseEndpointsValue(t *testing.T) {
 			},
 			want: nil,
 		},
+		{
+			name: "skips invalid slugs",
+			raw: []map[string]any{
+				{"slug": "/ok", "group_ids": []string{"group-1"}},
+				{"slug": "/with space", "group_ids": []string{"group-2"}},
+				{"slug": "/with?query=1", "group_ids": []string{"group-3"}},
+				{"slug": "/wild/{name}", "group_ids": []string{"group-4"}},
+				{"slug": "/with\nnewline", "group_ids": []string{"group-5"}},
+			},
+			want: []Endpoint{
+				{Slug: "/ok", GroupIDs: []string{"group-1"}},
+			},
+		},
 	}
 
 	for _, tt := range tests {
