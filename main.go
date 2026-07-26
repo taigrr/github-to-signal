@@ -295,10 +295,7 @@ func splitMessage(msg string) []string {
 				end = idx + 1
 			}
 		}
-		chunk := strings.TrimSpace(string(runes[:end]))
-		if chunk != "" {
-			chunks = append(chunks, chunk)
-		}
+		chunks = append(chunks, string(runes[:end]))
 		runes = runes[end:]
 	}
 	return chunks

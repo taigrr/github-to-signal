@@ -36,3 +36,20 @@ func TestSplitMessagePreservesUTF8(t *testing.T) {
 		t.Fatal("splitMessage() changed content")
 	}
 }
+
+func TestSplitMessagePreservesWhitespace(t *testing.T) {
+	input := strings.Repeat("a", maxMessageLen-2) + "\n  indented continuation  "
+	chunks := splitMessage(input)
+	if len(chunks) != 2 {
+		t.Fatalf("len(splitMessage()) = %d, want 2", len(chunks))
+	}
+	if strings.Join(chunks, "") != input {
+		t.Fatalf("splitMessage() changed content: %q", chunks)
+	}
+	if !strings.HasPrefix(chunks[1], "  ") {
+		t.Fatalf("second chunk lost leading whitespace: %q", chunks[1])
+	}
+	if !strings.HasSuffix(chunks[1], "  ") {
+		t.Fatalf("second chunk lost trailing whitespace: %q", chunks[1])
+	}
+}
