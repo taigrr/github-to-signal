@@ -1,12 +1,12 @@
 module github.com/taigrr/github-to-signal
 
-go 1.26.2
+go 1.26.5
 
 require (
 	github.com/cbrgm/githubevents/v2 v2.15.2
 	github.com/google/go-github/v84 v84.0.0
 	github.com/taigrr/jety v0.4.0
-	github.com/taigrr/signalcli v0.0.0-20260412082710-b926f174d525
+	github.com/taigrr/signalcli v0.1.0
 )
 
 require (

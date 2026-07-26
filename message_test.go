@@ -53,3 +53,21 @@ func TestSplitMessagePreservesWhitespace(t *testing.T) {
 		t.Fatalf("second chunk lost trailing whitespace: %q", chunks[1])
 	}
 }
+
+func TestSplitMessageMultibyteNewline(t *testing.T) {
+	// Multibyte runes before a newline within the first maxMessageLen runes
+	// previously caused a byte-vs-rune index panic / oversized chunks.
+	input := strings.Repeat("🙂", 1000) + "\n" + strings.Repeat("🙂", 1500)
+	chunks := splitMessage(input)
+	if strings.Join(chunks, "") != input {
+		t.Fatal("splitMessage() changed content")
+	}
+	for index, chunk := range chunks {
+		if !utf8.ValidString(chunk) {
+			t.Fatalf("chunk %d is invalid UTF-8", index)
+		}
+		if len([]rune(chunk)) > maxMessageLen {
+			t.Fatalf("chunk %d rune length = %d, want <= %d", index, len([]rune(chunk)), maxMessageLen)
+		}
+	}
+}

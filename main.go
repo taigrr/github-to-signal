@@ -9,12 +9,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/cbrgm/githubevents/v2/githubevents"
 	"github.com/google/go-github/v84/github"
 	"github.com/taigrr/signalcli"
 )
+
+// shutdownTimeout bounds graceful HTTP shutdown on SIGINT/SIGTERM.
+const shutdownTimeout = 10 * time.Second
 
 func main() {
 	cfg := loadConfig()
@@ -26,11 +32,28 @@ func main() {
 		log.Fatal("signal_recipient or signal_group_id is required")
 	}
 
-	signal := signalcli.NewClient(cfg.SignalURL, cfg.SignalAccount)
+	// Root context cancelled on SIGINT/SIGTERM so the managed daemon and HTTP
+	// server shut down gracefully (and the leaky signal-cli JVM child is
+	// stopped) instead of being orphaned on exit.
+	ctx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
+
+	signalURL := cfg.SignalURL
+	stopDaemon := func() {}
+	if cfg.SignalCLIPath != "" {
+		baseURL, stop, err := startManagedDaemon(ctx, cfg)
+		if err != nil {
+			log.Fatalf("managed signal-cli daemon: %v", err)
+		}
+		stopDaemon = stop
+		signalURL = baseURL
+	}
+
+	signalClient := signalcli.NewClient(signalURL, cfg.SignalAccount)
 	handle := githubevents.New(cfg.WebhookSecret)
 
 	n := &notifier{
-		signal:    signal,
+		signal:    signalClient,
 		recipient: cfg.SignalRecipient,
 		groupID:   cfg.SignalGroupID,
 		filter:    cfg.Events,
@@ -87,7 +110,7 @@ func main() {
 	})
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /webhook", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST "+webhookPath, func(w http.ResponseWriter, r *http.Request) {
 		if err := handle.HandleEventRequest(r); err != nil {
 			log.Printf("handle event: %v", err)
 			http.Error(w, "webhook processing failed", http.StatusInternalServerError)
@@ -99,15 +122,35 @@ func main() {
 		mux.HandleFunc("POST "+ep.Slug, n.handleCustom(cfg.CISecret, ep.GroupIDs))
 		log.Printf("custom endpoint enabled: POST %s -> %d group(s)", ep.Slug, len(ep.GroupIDs))
 	}
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET "+healthPath, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
 
 	log.Printf("listening on %s", cfg.ListenAddr)
-	if err := http.ListenAndServe(cfg.ListenAddr, mux); err != nil {
+	srv := &http.Server{Addr: cfg.ListenAddr, Handler: mux}
+
+	serverErr := make(chan error, 1)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			serverErr <- err
+		}
+	}()
+
+	select {
+	case err := <-serverErr:
+		stopDaemon()
 		log.Fatal(err)
+	case <-ctx.Done():
+		log.Println("shutting down")
 	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("http shutdown error: %v", err)
+	}
+	stopDaemon()
 }
 
 type notifier struct {
@@ -291,8 +334,13 @@ func splitMessage(msg string) []string {
 			end = len(runes)
 		}
 		if end < len(runes) {
-			if idx := strings.LastIndex(string(runes[:end]), "\n"); idx > 0 {
-				end = idx + 1
+			// Prefer splitting on a newline, searching by rune index so
+			// multibyte characters don't shift the boundary out of range.
+			for i := end - 1; i > 0; i-- {
+				if runes[i] == '\n' {
+					end = i + 1
+					break
+				}
 			}
 		}
 		chunks = append(chunks, string(runes[:end]))

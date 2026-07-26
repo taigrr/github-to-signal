@@ -44,6 +44,9 @@ Configuration via `config.toml` or environment variables with `GH2SIG_` prefix:
 | `signal_account` | `GH2SIG_SIGNAL_ACCOUNT` | Phone number for signal-cli |
 | `signal_recipient` | `GH2SIG_SIGNAL_RECIPIENT` | Recipient UUID for DMs |
 | `signal_group_id` | `GH2SIG_SIGNAL_GROUP_ID` | Group ID (overrides recipient) |
+| `signal_cli_path` | `GH2SIG_SIGNAL_CLI_PATH` | Path to signal-cli binary; if set, the daemon is launched and supervised in-process |
+| `signal_memory_limit_mb` | `GH2SIG_SIGNAL_MEMORY_LIMIT_MB` | RSS threshold (MiB) for the JVM memory watchdog; restarts the managed daemon when exceeded |
+| `signal_java_max_heap_mb` | `GH2SIG_SIGNAL_JAVA_MAX_HEAP_MB` | Explicit JVM `-Xmx` cap (MiB); auto-derived from the limit if 0 |
 | `events` | `GH2SIG_EVENTS` | Comma-separated event filter |
 
 Configuration is loaded using [jety](https://github.com/taigrr/jety) library.
@@ -130,3 +133,4 @@ The server expects signal-cli to be running on `127.0.0.1:8081`.
 - **signal-cli port**: Default in code is `8080`, but deployment uses `8081` to avoid conflicts
 - **Workflow runs**: Only notifies on `completed` action, ignores `requested`/`in_progress`
 - **Empty message**: Returning `""` from a formatter skips sending (used by workflow_run filter)
+- **Managed daemon / memory leak**: signal-cli runs on the JVM and gradually leaks memory. When `signal_cli_path` is set, the server launches signal-cli via `signalcli.NewDaemon`, caps its heap (`JavaMaxHeapMB`), and runs `Daemon.Watch` to restart it once RSS exceeds `signal_memory_limit_mb`. Without `signal_cli_path`, the daemon is external (systemd) and the watchdog does not apply — bound memory via the unit's `MemoryMax` instead. See `daemon.go`.

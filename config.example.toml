@@ -11,6 +11,23 @@ listen_addr = ":9900"
 # signal-cli JSON-RPC endpoint
 signal_url = "http://127.0.0.1:8081"
 
+# --- Managed signal-cli daemon (optional) ---
+# By default this server talks to an externally managed signal-cli daemon
+# (e.g. via systemd) at signal_url. Set signal_cli_path to instead have this
+# process launch and supervise signal-cli itself. This is recommended because
+# signal-cli runs on the JVM and gradually leaks memory: a built-in watchdog
+# caps the JVM heap and restarts the daemon before it exhausts host RAM.
+#
+# Path to the signal-cli binary. Leave empty to use an external daemon.
+# signal_cli_path = "/usr/local/bin/signal-cli"
+#
+# RSS threshold (MiB) at which the managed daemon is restarted. Set > 0 to
+# enable the watchdog. The JVM max heap (-Xmx) is auto-derived from this.
+# signal_memory_limit_mb = 512
+#
+# Explicit JVM max heap cap (-Xmx, MiB). Leave 0 to derive from the limit.
+# signal_java_max_heap_mb = 0
+
 # signal-cli account (phone number registered with signal-cli)
 signal_account = "+YOURNUMBER"
 

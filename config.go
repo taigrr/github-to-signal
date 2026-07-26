@@ -11,6 +11,20 @@ import (
 
 const defaultSignalURL = "http://127.0.0.1:8081"
 
+// Built-in HTTP route paths. Custom endpoints may not reuse these, otherwise
+// registering them on the ServeMux would panic at startup.
+const (
+	webhookPath = "/webhook"
+	healthPath  = "/health"
+)
+
+// reservedEndpointSlugs are paths owned by built-in routes; custom endpoints
+// using them are rejected during config parsing.
+var reservedEndpointSlugs = map[string]bool{
+	webhookPath: true,
+	healthPath:  true,
+}
+
 // Config holds the application configuration.
 type Config struct {
 	ListenAddr      string
@@ -22,6 +36,19 @@ type Config struct {
 	SignalGroupID   string
 	Events          EventFilter
 	Endpoints       []Endpoint
+
+	// SignalCLIPath, when set, makes this process launch and supervise the
+	// signal-cli daemon itself (instead of talking to an externally managed
+	// one). This enables the JVM memory cap and RSS watchdog below.
+	SignalCLIPath string
+	// SignalMemoryLimitMB is the RSS threshold (in MiB) at which the managed
+	// signal-cli daemon is restarted. signal-cli runs on the JVM and leaks
+	// memory over time; the watchdog bounds its footprint. 0 disables the
+	// watchdog.
+	SignalMemoryLimitMB int
+	// SignalJavaMaxHeapMB caps the managed daemon's JVM max heap via -Xmx.
+	// 0 lets the watchdog derive it from SignalMemoryLimitMB.
+	SignalJavaMaxHeapMB int
 }
 
 // Endpoint defines a custom HTTP endpoint that forwards messages to one or more Signal groups.
@@ -60,6 +87,10 @@ func loadConfig() Config {
 		SignalGroupID:   jety.GetString("signal_group_id"),
 		Events:          ParseEventFilter(filters),
 		Endpoints:       parseEndpoints(),
+
+		SignalCLIPath:       jety.GetString("signal_cli_path"),
+		SignalMemoryLimitMB: jety.GetInt("signal_memory_limit_mb"),
+		SignalJavaMaxHeapMB: jety.GetInt("signal_java_max_heap_mb"),
 	}
 }
 
@@ -79,12 +110,21 @@ func parseEndpointsValue(raw any) []Endpoint {
 	}
 
 	var endpoints []Endpoint
+	seen := make(map[string]bool)
 	for _, t := range tables {
 		slug, _ := t["slug"].(string)
 		var ok bool
 		slug, ok = normalizeEndpointSlug(slug)
 		if !ok {
 			log.Printf("warning: endpoint has invalid slug, skipping")
+			continue
+		}
+		if reservedEndpointSlugs[slug] {
+			log.Printf("warning: endpoint slug %q is reserved, skipping", slug)
+			continue
+		}
+		if seen[slug] {
+			log.Printf("warning: duplicate endpoint slug %q, skipping", slug)
 			continue
 		}
 
@@ -110,6 +150,7 @@ func parseEndpointsValue(raw any) []Endpoint {
 		}
 
 		endpoints = append(endpoints, Endpoint{Slug: slug, GroupIDs: groupIDs})
+		seen[slug] = true
 	}
 
 	return endpoints

@@ -62,6 +62,18 @@ func TestParseEndpointsValue(t *testing.T) {
 				{Slug: "/ok", GroupIDs: []string{"group-1"}},
 			},
 		},
+		{
+			name: "rejects reserved and duplicate slugs",
+			raw: []map[string]any{
+				{"slug": "/webhook", "group_ids": []string{"group-1"}},
+				{"slug": "/health", "group_ids": []string{"group-2"}},
+				{"slug": "/dup", "group_ids": []string{"group-3"}},
+				{"slug": "/dup", "group_ids": []string{"group-4"}},
+			},
+			want: []Endpoint{
+				{Slug: "/dup", GroupIDs: []string{"group-3"}},
+			},
+		},
 	}
 
 	for _, tt := range tests {
