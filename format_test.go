@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/google/go-github/v84/github"
+	"github.com/google/go-github/v89/github"
 )
 
 func strPtr(s string) *string { return &s }
@@ -250,8 +250,8 @@ func TestFormatRelease(t *testing.T) {
 			Login: strPtr("tai"),
 		},
 		Release: &github.RepositoryRelease{
-			TagName: strPtr("v1.0.0"),
-			HTMLURL: strPtr("https://github.com/taigrr/example/releases/tag/v1.0.0"),
+			TagName: "v1.0.0",
+			HTMLURL: "https://github.com/taigrr/example/releases/tag/v1.0.0",
 		},
 	}
 
