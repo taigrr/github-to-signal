@@ -3,8 +3,8 @@ module github.com/taigrr/github-to-signal
 go 1.27.1
 
 require (
-	github.com/cbrgm/githubevents/v2 v2.21.0
-	github.com/google/go-github/v91 v91.0.0
+	github.com/cbrgm/githubevents/v2 v2.22.0
+	github.com/google/go-github/v92 v92.0.0
 	github.com/taigrr/jety v0.4.3
 	github.com/taigrr/signalcli v0.1.1
 )
