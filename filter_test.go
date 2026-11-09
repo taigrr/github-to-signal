@@ -18,6 +18,12 @@ func TestEventFilter(t *testing.T) {
 		{"multiple actions", []string{"pull_request:opened", "pull_request:closed"}, "pull_request", "closed", true},
 		{"mixed event and action", []string{"push", "pull_request:opened"}, "push", "", true},
 		{"mixed blocks filtered", []string{"push", "pull_request:opened"}, "pull_request", "closed", false},
+		{"whole event before action", []string{"issues", "issues:opened"}, "issues", "closed", true},
+		{"whole event after action", []string{"issues:opened", "issues"}, "issues", "closed", true},
+		{"whole event between actions", []string{"issues:opened", "issues", "issues:edited"}, "issues", "closed", true},
+		{"empty action allows all", []string{"issues:opened", "issues: "}, "issues", "closed", true},
+		{"normalized whole event", []string{" Issues ", "ISSUES:opened"}, "issues", "closed", true},
+		{"whole event keeps other restrictions", []string{"issues", "issues:opened", "pull_request:opened"}, "pull_request", "closed", false},
 		{"case insensitive", []string{"Pull_Request:Opened"}, "pull_request", "opened", true},
 	}
 

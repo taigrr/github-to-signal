@@ -32,16 +32,22 @@ func ParseEventFilter(filters []string) EventFilter {
 			continue
 		}
 
-		if _, ok := ef.rules[event]; !ok {
-			ef.rules[event] = make(map[string]bool)
+		action = strings.ToLower(strings.TrimSpace(action))
+		if !hasAction || action == "" {
+			// A whole-event rule subsumes every action-specific rule.
+			ef.rules[event] = nil
+			continue
 		}
 
-		if hasAction {
-			action = strings.ToLower(strings.TrimSpace(action))
-			if action != "" {
-				ef.rules[event][action] = true
-			}
+		actions, exists := ef.rules[event]
+		if exists && len(actions) == 0 {
+			continue // An earlier whole-event rule already allows all actions.
 		}
+		if !exists {
+			actions = make(map[string]bool)
+			ef.rules[event] = actions
+		}
+		actions[action] = true
 	}
 
 	return ef
