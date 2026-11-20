@@ -68,6 +68,8 @@ export GH2SIG_SIGNAL_RECIPIENT="recipient-uuid"
 
 ### 4. Build and run
 
+Requires Go 1.27.4 or later.
+
 ```bash
 go build -o github-to-signal .
 ./github-to-signal
