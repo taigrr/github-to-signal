@@ -1,8 +1,6 @@
 module github.com/taigrr/github-to-signal
 
-go 1.27.1
-
-toolchain go1.27.3
+go 1.27.4
 
 require (
 	github.com/cbrgm/githubevents/v2 v2.22.0
